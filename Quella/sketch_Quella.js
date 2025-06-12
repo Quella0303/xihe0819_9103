@@ -60,7 +60,7 @@ function draw() {
 
   fill(255);
   textSize(14);
-  text("Version 2a: Perlin Noise Animation Only", 20, height - 20);
+  text("Version 2b: + Mouse Interaction (Hover and Return)", 20, height - 20);
 }
 
 // Brush stroke class
@@ -70,19 +70,43 @@ class BrushStroke {
     this.pos = createVector(x, y);
     this.color = col;
     this.layer = layer;
-    this.seed = random(1000);     // For unique Perlin noise per stroke
+    this.seed = random(1000);
     this.angle = random(TWO_PI);
     this.length = random(4, 10 + layer * 2);
     this.width = random(3, 8 + layer);
     this.alpha = random(150, 220);
+    this.back = this.origin.copy();      // Original position
+    this.backSpeed = random(0.02, 0.05); // Return speed
+    this.affected = false;               // Mouse interaction flag
   }
 
   update(t) {
-    let n = noise(this.origin.x * 0.005, this.origin.y * 0.005, t * 0.3 + this.seed);
-    this.angle = n * TWO_PI * 2;
-    let radius = 3 + this.layer * 2;
-    this.pos.x = this.origin.x + cos(this.angle) * radius;
-    this.pos.y = this.origin.y + sin(this.angle) * radius;
+    let d = dist(mouseX, mouseY, this.origin.x, this.origin.y);
+    let influenceRadius = 60;
+
+    if (d < influenceRadius) {
+      // When near mouse – orbit around it
+      this.affected = true;
+      let diff = createVector(mouseX - this.origin.x, mouseY - this.origin.y);
+      this.pos.x = mouseX + cos(t * 2 + this.seed) * diff.mag();
+      this.pos.y = mouseY + sin(t * 2 + this.seed) * diff.mag();
+      this.angle = atan2(mouseY - this.pos.y, mouseX - this.pos.x) + HALF_PI;
+    } else if (this.affected) {
+      // Smoothly return to original location
+      this.pos.lerp(this.back, this.backSpeed);
+      if (dist(this.pos.x, this.pos.y, this.back.x, this.back.y) < 1) {
+        this.affected = false;
+      }
+      // Add angle noise during return
+      this.angle = lerp(this.angle, noise(t * 0.3 + this.seed) * TWO_PI, 0.05);
+    } else {
+      // Perlin-driven default motion
+      let n = noise(this.origin.x * 0.005, this.origin.y * 0.005, t * 0.3 + this.seed);
+      this.angle = n * TWO_PI * 2;
+      let radius = 3 + this.layer * 2;
+      this.pos.x = this.origin.x + cos(this.angle) * radius;
+      this.pos.y = this.origin.y + sin(this.angle) * radius;
+    }
   }
 
   display() {
@@ -100,6 +124,7 @@ class BrushStroke {
     pop();
   }
 }
+
 
 
 
