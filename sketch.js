@@ -1,81 +1,159 @@
-let doveImg;
-let dots = [];
+
+
+let doveImg;         // Dove image
+let strokes = [];    // All brush stroke particles
+
 
 function preload() {
-  // Load the dove image
-  doveImg = loadImage("assets/dovefinal.png");
+ doveImg = loadImage("assets/dovefinal.png");  // Load image before setup
 }
+
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
-  pixelDensity(1); // Use 1 display pixel per canvas pixel for accuracy
+ createCanvas(windowWidth, windowHeight);  // Full-screen canvas
+ pixelDensity(1);                          // Avoid scaling for retina displays
+ doveImg.resize(1000, 0);                  // Resize image to fixed width
+ doveImg.loadPixels();                     // Load pixel data for color detection
 
-  // Resize image to width = 1000px, height is auto-calculated
-  doveImg.resize(1000, 0);
-  doveImg.loadPixels();
 
-  // Centering the image on the canvas
-  let xOffset = (width - doveImg.width) / 2;
-  let yOffset = (height - doveImg.height) / 2;
+ let xOff = (width - doveImg.width) / 2;   // Center image horizontally
+ let yOff = (height - doveImg.height) / 2; // Center image vertically
 
-  // Loop through the image pixels and place a dot where it's dark
-  for (let y = 0; y < doveImg.height; y += 3) {
-    for (let x = 0; x < doveImg.width; x += 3) {
-      let index = (x + y * doveImg.width) * 4;
-      let r = doveImg.pixels[index];
-      let g = doveImg.pixels[index + 1];
-      let b = doveImg.pixels[index + 2];
 
-      let brightness = (r + g + b) / 3;
-      if (brightness < 50) {
-        dots.push(new Dot(x + xOffset, y + yOffset)); // place dot with offset to center it
-      }
-    }
-  }
+ for (let l = 0; l < 3; l++) {             // Three layers for depth effect
+   for (let y = 0; y < doveImg.height; y += 4) {
+     for (let x = 0; x < doveImg.width; x += 4) {
+       let i = (x + y * doveImg.width) * 4;    // Pixel index
+       let r = doveImg.pixels[i];
+       let g = doveImg.pixels[i + 1];
+       let b = doveImg.pixels[i + 2];
+       let bright = (r + g + b) / 3;          // Average brightness
 
-  noStroke();
-  fill(0);
+
+       // Only keep bright pixels, with some randomness
+       if (bright > 50 && random() > 0.7) {
+         // Add small color variation using random()
+         let c = color(
+           constrain(r + random(-20, 20), 0, 255),
+           constrain(g + random(-15, 15), 0, 255),
+           constrain(b + random(-20, 20), 0, 255)
+         );
+
+
+         // Position also slightly jittered by random()
+         strokes.push(new BrushStroke(
+           x + xOff + random(-3, 3),
+           y + yOff + random(-3, 3),
+           c, l
+         ));
+       }
+     }
+   }
+ }
 }
+
 
 function draw() {
-  background(255); // white background
-  let mouse = createVector(mouseX, mouseY); // get current mouse position as a vector
+ background(0);                    // Black background
+ let t = millis() * 0.001;         // Time in seconds
 
-  // Update and display all the dots (particles)
-  for (let dot of dots) {
-    dot.update(mouse);
-    dot.display();
-  }
+
+ for (let s of strokes) {
+   s.update(t);                    // Update stroke position
+   s.show();                       // Draw stroke
+ }
+
+
+ fill(255);
+ textSize(14);
+ text("Perlin + Random Ink Motion", 20, height - 20);  // Caption
 }
 
-// Dot class: defines each moving point on the dove image
-class Dot {
-  constructor(x, y) {
-    this.origin = createVector(x, y); // original position
-    this.pos = this.origin.copy();    // current position
-    this.vel = createVector(0, 0);    // current velocity
+
+// Brush stroke class
+class BrushStroke {
+ constructor(x, y, c, l) {
+ this.origin = createVector(x, y);     // Original (starting) position
+ this.pos = this.origin.copy();        // Current position
+ this.col = c;                         // Base color
+ this.lay = l;                         // Layer index (depth)
+ this.seed = random(1000);             // Unique random seed per stroke
+ this.len = random(4, 12 + l * 2);     // Length (randomized)
+ this.wid = random(3, 9 + l);          // Width (randomized)
+ this.a = random(TWO_PI);              // Initial angle
+ this.alpha = random(120, 230);        // Transparency
+ this.back = this.origin.copy();       // Target to return to
+ this.backSpeed = random(0.02, 0.05);  // Recovery speed
+ this.hit = false;                     // Whether mouse is affecting it
+ this.ink = false;                     // Whether in "ink" mode
+   this.jitter = random(0.5, 1.5);       // Small movement noise
+ }
+
+
+ update(t) {
+  let d = dist(mouseX, mouseY, this.origin.x, this.origin.y);
+
+
+  if (d < 60) {
+  // When close to mouse, enter "ink mode"
+  this.hit = true;
+  this.ink = true;
+
+
+  let diff = createVector(mouseX - this.origin.x, mouseY - this.origin.y);
+  // Flow motion around mouse, using Perlin time + random seed
+  this.pos.x = mouseX + cos(t * 2 + this.seed) * diff.mag();
+  this.pos.y = mouseY + sin(t * 2 + this.seed) * diff.mag();
+  this.a = atan2(mouseY - this.pos.y, mouseX - this.pos.x) + HALF_PI;
+   } else if (this.hit) {
+  // Smoothly return to original position using lerp()
+  this.pos.lerp(this.back, this.backSpeed);
+  if (dist(this.pos.x, this.pos.y, this.back.x, this.back.y) < 1) {
+  this.hit = false;
+  this.ink = false;
+  }
+  // Smooth angle using noise()
+  this.a = lerp(this.a, noise(t * 0.3 + this.seed) * TWO_PI, 0.05);
+   } else {
+  // Regular flow motion using Perlin noise and some random()
+  let n = noise(this.origin.x * 0.005, this.origin.y * 0.005, t * 0.3 + this.seed);
+  this.a = n * TWO_PI * 2 + random(-0.05, 0.05); // Add jitter
+  let r = 3 + this.lay * 2;
+  this.pos.x = this.origin.x + cos(this.a) * r + random(-this.jitter, this.jitter);
+  this.pos.y = this.origin.y + sin(this.a) * r + random(-this.jitter, this.jitter);
+   }
+ }
+
+
+ show() {
+   let r, g, b;
+
+   if (this.ink) {
+   // When in ink mode: grayscale, noise-based
+  let n = noise(this.pos.x * 0.01, this.pos.y * 0.01, frameCount * 0.01);
+  let gray = n * 255;
+  if (random() > 0.5) {
+  r = g = b = gray * 0.2 + random(10, 30);  // Dark ink
+  } else {
+  r = g = b = gray * 0.9 + random(20, 40);  // Light ink
+     }
+  } else {
+   // Normal color mode with slight RGB noise
+  r = constrain(red(this.col) + random(-5, 5), 0, 255);
+  g = constrain(green(this.col) + random(-4, 4), 0, 255);
+  b = constrain(blue(this.col) + random(-5, 5), 0, 255);
   }
 
-  update(mouseVec) {
-    let dir = p5.Vector.sub(this.pos, mouseVec); // direction from mouse to dot
-    let d = dir.mag(); // distance
 
-    // If close to mouse and mouse is pressed, push it away
-    if (d < 80 && mouseIsPressed) {
-      dir.setMag(1.2);     // control push strength
-      this.vel.add(dir);   // apply the push
-    }
+   let a = constrain(this.alpha + random(-10, 10), 80, 255); // Alpha flicker
 
-    this.vel.mult(0.9);     // apply friction
-    this.pos.add(this.vel); // update position
 
-    // Slowly return to original position
-    let back = p5.Vector.sub(this.origin, this.pos);
-    back.mult(0.03);
-    this.pos.add(back);
-  }
-
-  display() {
-    ellipse(this.pos.x, this.pos.y, 2.8, 2.8); // draw the dot
-  }
+   noStroke();
+   fill(r, g, b, a);
+   push();
+   translate(this.pos.x, this.pos.y);
+   rotate(this.a);
+   ellipse(0, 0, this.len, this.wid);  // Draw the ellipse shape
+   pop();
+ }
 }
