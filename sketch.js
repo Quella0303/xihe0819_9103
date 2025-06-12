@@ -3,11 +3,9 @@
 let doveImg;         // Dove image
 let strokes = [];    // All brush stroke particles
 
-
 function preload() {
  doveImg = loadImage("assets/dovefinal.png");  // Load image before setup
 }
-
 
 function setup() {
  createCanvas(windowWidth, windowHeight);  // Full-screen canvas
