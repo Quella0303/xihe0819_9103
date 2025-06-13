@@ -79,7 +79,7 @@ By combining the influences with our group’s dove shape and motion base, I tri
 - **ChatGPT** ：I used ChatGPT as a brainstorming and technical support tool. Specifically, I:
 Sought guidance on how to combine Perlin noise with user interaction (e.g., triggering effects when mouse is nearby).
 Received assistance formatting this README and references into a more academic and professional structure.
-I adapted and rewrote all code and descriptions myself.All the code was written by myself.
+I wrote all code and descriptions myself.
 - **p5.js** (https://p5js.org)
 
 ---
@@ -89,4 +89,4 @@ Nan Qi. (n.d.). 3 Coloured Halo Dots. Wikimedia Commons. https://en.wikipedia.or
 OpenProcessing. (n.d.). Simulated Ink Brush Pressure. https://openprocessing.org/sketch/984328
 p5.js. (n.d.). p5.js reference. Processing Foundation. https://p5js.or
 ### Group Artwork Reference
-Based on the image **"Dove of Peace" by Pablo Picasso** (not part of the official artwork list but used for code development).
+Based on the image **"Dove of Peace" by Pablo Picasso** 
